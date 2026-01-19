@@ -1,0 +1,13 @@
+# Python
+__pycache__/
+*.pyc
+.env
+.venv
+
+# Data (large files)
+data/
+*.faiss
+*.jsonl
+
+# OS
+.DS_Store

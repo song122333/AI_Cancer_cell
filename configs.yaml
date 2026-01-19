@@ -1,0 +1,3 @@
+upstage:
+  base_url: "https://api.upstage.ai/v1/chat/completions"
+  model_name: "solar-pro2"   # 또는 "solar-pro" / "solar-mini" 등 자유롭게 교체

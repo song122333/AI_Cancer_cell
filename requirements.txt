@@ -1,0 +1,29 @@
+# --- 기본 유틸리티 ---
+python-dotenv
+numpy
+tqdm
+pandas
+scikit-learn
+pydantic
+
+# --- PDF 및 텍스트 처리 ---
+pdfplumber
+langdetect
+
+# --- Upstage & LangChain (핵심) ---
+langchain-core
+langchain-community
+langchain-upstage
+
+# --- 벡터 저장소 ---
+faiss-cpu
+
+# --- 외부 데이터 소스 ---
+wikipedia-api
+# wikipedia (이건 필요 없으면 삭제, wikipedia-api랑 보통 같이 안 씀)
+
+# --- 웹 서버 (필요한 경우만 유지) ---
+fastapi
+uvicorn
+
+tabulate
