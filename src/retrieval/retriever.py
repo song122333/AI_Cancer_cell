@@ -41,7 +41,7 @@ def search_faiss_index(
     q_emb = embedder.encode(query)[0]
     results = index.search(q_emb, top_k=top_k)
     
-    # 소스 태그 추가 (LLM이 출처를 알 수 있게)
+    # 소스 태그 추가 
     for r in results:
         r["source"] = source_tag
         
@@ -60,11 +60,6 @@ _STOPWORDS = {
 }
 
 def _tokenize_bio(text: str) -> List[str]:
-    """
-    [수정됨] 영문+숫자+하이픈 포함 (PD-1, CTLA-4, Phase-3 등 포착)
-    """
-    # 기존: r"[A-Za-z][A-Za-z\-']*" -> 숫자 누락됨
-    # 수정: 숫자 포함 허용
     tokens = re.findall(r"[A-Za-z0-9][A-Za-z0-9\-']*", text)
     return [t for t in tokens if t.strip()]
 
@@ -80,15 +75,13 @@ def extract_candidate_titles(query: str, max_candidates: int = 5) -> List[str]:
     
     candidates = []
 
-    # 1. N-gram (Bigram/Trigram) 우선 - 약물명, 병명은 보통 길다
-    # 예: "Lung Cancer", "Immune Checkpoint"
+    # 1. N-gram (Bigram/Trigram) 우선
     for i in range(len(tokens) - 1):
         bigram = f"{tokens[i]} {tokens[i+1]}"
         if len(bigram) > 4: 
             candidates.append(bigram)
             
     # 2. 중요한 Unigram (Bio terms)
-    # 짧아도 대문자가 섞여있거나 숫자가 있으면 중요 단어일 확률 높음 (p53, PD-1)
     for t in tokens:
         if t.lower() in _STOPWORDS:
             continue
@@ -101,7 +94,7 @@ def extract_candidate_titles(query: str, max_candidates: int = 5) -> List[str]:
     final_candidates = []
     for c in candidates:
         # Wikipedia 형식에 맞게 Title Case 변환
-        c_fmt = c.title() if not c.isupper() else c # PD-1 등은 유지
+        c_fmt = c.title() if not c.isupper() else c
         if c_fmt not in seen:
             seen.add(c_fmt)
             final_candidates.append(c_fmt)
@@ -127,10 +120,10 @@ def search_wikipedia_chunks(query: str, max_pages: int = 3) -> List[Dict]:
         if not page.exists():
             continue
 
-        # 문단 단위 분할 (너무 짧은 문단 제외)
+        # 문단 단위 분할
         paragraphs = [p for p in page.text.split("\n") if len(p.strip()) > 50]
         
-        # 상위 3개 문단만 사용 (Introduction이 가장 중요)
+        # 상위 3개 문단만 사용
         for p in paragraphs[:3]:
             chunks.append({
                 "text": p,
@@ -161,11 +154,11 @@ def rerank_results(
     
     scored_items = []
     for item in candidates:
-        # 텍스트 임베딩 계산 (캐싱되어 있다면 더 좋음)
+        # 텍스트 임베딩 계산
         c_text = item.get("text", "")
         c_emb = embedder.encode(c_text)[0]
         
-        # Cosine Similarity (Normalized vector assumed)
+        # 코사인 유사도 계산
         score = float((q_emb * c_emb).sum())
         item["score"] = score
         scored_items.append(item)
@@ -182,8 +175,7 @@ def rerank_results(
 def get_relevant_context(
     query: str,
     embedder: SolarEmbedder,
-    clinical_index: Optional[FaissIndex] = None,   # 임상 가이드라인
-    literature_index: Optional[FaissIndex] = None, # 논문
+    vector_db: Optional[FaissIndex] = None,
     use_wiki: bool = True
 ) -> str:
     """
@@ -192,30 +184,23 @@ def get_relevant_context(
     
     all_chunks = []
 
-    # 1. 임상 가이드라인 검색 (가장 신뢰도 높음)
-    if clinical_index:
+    # 1. 참고 자료 데이터베이스(논문,연구 등)
+    if vector_db:
         guideline_chunks = search_faiss_index(
-            query, embedder, clinical_index, top_k=4, source_tag="Clinical_Guideline"
+            query, embedder, vector_db, top_k=4, source_tag="Paper_DB"
         )
         all_chunks.extend(guideline_chunks)
 
-    # 2. 논문 검색 (최신 연구)
-    if literature_index:
-        paper_chunks = search_faiss_index(
-            query, embedder, literature_index, top_k=4, source_tag="PubMed_Paper"
-        )
-        all_chunks.extend(paper_chunks)
-
-    # 3. 위키백과 검색 (배경 지식 보완)
+    # 2. 위키백과 검색 (배경 지식 보완)
     if use_wiki:
         wiki_chunks = search_wikipedia_chunks(query, max_pages=2)
         all_chunks.extend(wiki_chunks)
 
-    # 4. 통합 Reranking
+    # 3. 통합 Reranking
     # 검색된 모든 문서 중 질문과 가장 관련성 높은 순서로 정렬
     best_chunks = rerank_results(query, all_chunks, embedder, top_k=6)
 
-    # 5. 프롬프트 주입용 텍스트 생성
+    # 4. 프롬프트 주입용 텍스트 생성
     formatted_context = []
     for chunk in best_chunks:
         source = chunk.get("source", "Unknown")

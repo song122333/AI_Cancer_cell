@@ -6,7 +6,6 @@ import yaml
 from typing import Dict
 from dotenv import load_dotenv
 
-# prompts.py에 정의된 AGENT_PROMPTS 딕셔너리 가져오기
 from src.llm.prompts import AGENT_PROMPTS
 
 load_dotenv()
@@ -84,10 +83,10 @@ def run_multidisciplinary_debate(
     # 1. 전문가 3인 의견 청취
     specialists = ["mechanism", "clinical", "safety"]
     
-    print(f"\n   [Debate] 📢 Convening Tumor Board for: '{query}'")
+    print(f"\n   [Debate] Convening Tumor Board for: '{query}'")
 
     for role in specialists:
-        print(f"   [Debate] 👨‍⚕️ Consulting {role.capitalize()} Specialist...")
+        print(f"   [Debate] Consulting {role.capitalize()} Specialist...")
         
         # 각 전문가용 프롬프트 로드
         prompt_template = AGENT_PROMPTS.get(role)
@@ -102,7 +101,7 @@ def run_multidisciplinary_debate(
         reports[role] = response
 
     # 2. 의장(Moderator) 종합
-    print(f"   [Debate] 🎓 Chief Oncologist is synthesizing the final verdict...")
+    print(f"   [Debate] Chief Oncologist is synthesizing the final verdict...")
     
     moderator_template = AGENT_PROMPTS.get("moderator")
     if moderator_template:

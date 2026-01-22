@@ -18,7 +18,7 @@ class SolarEmbedder:
         if not api_key:
             raise ValueError("UPSTAGE_API_KEY가 설정되지 않았습니다. .env 파일을 확인해주세요.")
 
-        # API Key를 명시적으로 전달하여 안정성 확보
+        # API Key
         self.model = UpstageEmbeddings(
             model=model_name, 
             upstage_api_key=api_key
@@ -33,20 +33,20 @@ class SolarEmbedder:
         if isinstance(texts, str):
             texts = [texts]
 
-        # 2. 빈 텍스트 필터링 (불필요한 API 호출 방지)
+        # 2. 빈 텍스트 필터링
         valid_texts = [t for t in texts if t.strip()]
         if not valid_texts:
             return np.array([])
 
         try:
-            # 3. 임베딩 생성 (List Comprehension으로 속도/가독성 향상)
-            # RAG 질문용이므로 embed_query 사용 (문서용은 embed_documents 권장)
+            # 3. 임베딩 생성
+            # RAG 질문용이므로 embed_query 사용
             vectors = [self.model.embed_query(t) for t in valid_texts]
 
             # 4. Numpy 변환
             arr = np.array(vectors, dtype="float32")
 
-            # 5. L2 정규화 (유지)
+            # 5. L2 정규화
             norms = np.linalg.norm(arr, axis=1, keepdims=True)
             return arr / np.clip(norms, 1e-12, None)
 

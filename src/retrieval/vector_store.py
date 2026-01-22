@@ -16,13 +16,11 @@ class FaissIndex:
         self.index_path = index_path
         self.meta_path = meta_path
 
-        # 1. 파일 존재 확인 (디버깅 효율성)
+        # 1. 파일 존재 확인
         if not os.path.exists(index_path) or not os.path.exists(meta_path):
             raise FileNotFoundError(f"DB 파일을 찾을 수 없습니다: {index_path} 또는 {meta_path}")
 
-        # 2. FAISS 인덱스 메모리 매핑 로드 (속도 최적화)
-        # read_index 대신 read_index를 쓰되, 필요시 mmap 옵션을 고려할 수 있음. 
-        # 여기서는 기본 read_index 유지
+        # 2. FAISS 인덱스 메모리 매핑 로드
         self.index = faiss.read_index(index_path)
 
         # 3. 메타데이터 로드
@@ -39,8 +37,7 @@ class FaissIndex:
         """
         벡터 검색 수행
         """
-        # [효율화 1] 데이터 타입 강제 변환 (FAISS는 float32만 처리 가능)
-        # float64가 들어오면 내부 변환하느라 느려지거나 에러날 수 있음
+        #데이터 타입 강제 변환 (FAISS는 float32만 처리 가능)
         if query_emb.dtype != np.float32:
             query_emb = query_emb.astype(np.float32)
 
@@ -48,7 +45,7 @@ class FaissIndex:
         if query_emb.ndim == 1:
             query_emb = query_emb.reshape(1, -1)
 
-        # [효율화 2] 차원 검사 (Crash 방지)
+        #차원 일치 검사
         if query_emb.shape[1] != self.index.d:
             raise ValueError(f"차원 불일치: Index({self.index.d}) vs Query({query_emb.shape[1]})")
 
@@ -56,8 +53,7 @@ class FaissIndex:
         scores, idxs = self.index.search(query_emb, top_k)
 
         results = []
-        # [효율화 3] 유효하지 않은 인덱스(-1) 필터링
-        # FAISS는 이웃을 못 찾으면 -1을 반환하는데, 이를 그대로 metadata[-1]로 읽으면 데이터가 꼬임
+        #유효하지 않은 인덱스(-1) 필터링
         for score, idx in zip(scores[0], idxs[0]):
             if idx == -1 or idx >= len(self.metadata):
                 continue
@@ -65,7 +61,7 @@ class FaissIndex:
             meta = self.metadata[idx]
             results.append({
                 "score": float(score),
-                "text": meta.get("text", ""), # key error 방지
+                "text": meta.get("text", ""),
                 **meta
             })
 

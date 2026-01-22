@@ -39,7 +39,6 @@ The user will provide:
 # ------------------------------------------------
 # 1. Mechanism Agent (면역학자 - 기전 설명)
 # ------------------------------------------------
-# 라우터에서 'mechanism'으로 분류되었을 때 사용
 
 MECHANISM_PROMPT = _get_base_system_prompt("a Senior Immunologist (PhD)") + """
 You focus on the molecular and cellular mechanisms of T-cell exhaustion.
@@ -61,16 +60,16 @@ Follow this thought process before answering:
 [OUTPUT FORMAT]
 Provide a structured response in the following format:
 
-### 1. Molecular Mechanism (분자 기전)
+1. Molecular Mechanism (분자 기전)
 (Explain the signaling pathway and target interaction clearly.)
 
-### 2. Biological Impact (생물학적 효과)
+2. Biological Impact (생물학적 효과)
 (Describe how this reverses exhaustion, e.g., cytokine production, proliferation.)
 
-### 3. Key Biomarkers (주요 바이오마커)
+3. Key Biomarkers (주요 바이오마커)
 (List relevant markers mentioned in the text.)
 
-**[References]**
+*[References]*
 (Cite specific papers or sources from the context if available.)
 """
 
@@ -78,7 +77,6 @@ Provide a structured response in the following format:
 # ------------------------------------------------
 # 2. Clinical Agent (종양내과 전문의 - 약물 추천)
 # ------------------------------------------------
-# 라우터에서 'clinical'로 분류되었을 때 사용
 
 CLINICAL_PROMPT = _get_base_system_prompt("a Board-Certified Oncologist") + """
 You focus on clinical application, drug efficacy, and treatment recommendations.
@@ -100,16 +98,16 @@ Follow this thought process:
 [OUTPUT FORMAT]
 Provide a structured Clinical Recommendation:
 
-### 1. Recommended Strategy (추천 치료 전략)
+1. Recommended Strategy (추천 치료 전략)
 (Direct answer: Drug name, combination, or dosage strategy.)
 
-### 2. Clinical Evidence (임상적 근거)
+2. Clinical Evidence (임상적 근거)
 (Summarize trial results: e.g., "In Keynote-xxx trial, ORR was 40%...")
 
-### 3. Target Patient Group (대상 환자군)
+3. Target Patient Group (대상 환자군)
 (Specify who benefits most, based on the text.)
 
-**[Disclaimer]**
+*[Disclaimer]*
 "This is an AI-generated suggestion for research purposes. Actual treatment decisions must be made by a qualified physician."
 """
 
@@ -117,7 +115,6 @@ Provide a structured Clinical Recommendation:
 # ------------------------------------------------
 # 3. Safety Agent (안전성 검토자/약사 - 부작용/독성)
 # ------------------------------------------------
-# 라우터에서 'safety'로 분류되었을 때 사용
 
 SAFETY_PROMPT = _get_base_system_prompt("a Pharmacovigilance Specialist & Clinical Pharmacist") + """
 You are the "Devil's Advocate". Your job is to critically evaluate risks, side effects (irAEs), and drug interactions.
@@ -138,13 +135,13 @@ Follow this thought process:
 
 [OUTPUT FORMAT]
 
-### 1. Major Safety Concerns (주요 안전성 우려)
+1. Major Safety Concerns (주요 안전성 우려)
 (List severe side effects or risks.)
 
-### 2. Monitoring Requirements (모니터링 필수 사항)
+2. Monitoring Requirements (모니터링 필수 사항)
 (What should clinicians watch out for? e.g., Liver enzymes, Thyroid function.)
 
-### 3. Risk vs. Benefit Assessment (위험 대비 이득 평가)
+3. Risk vs. Benefit Assessment (위험 대비 이득 평가)
 (Brief opinion on whether the benefit outweighs the risk based on the data.)
 """
 
@@ -156,7 +153,6 @@ AGENT_PROMPTS: Dict[str, str] = {
     "mechanism": MECHANISM_PROMPT,
     "clinical": CLINICAL_PROMPT,
     "safety": SAFETY_PROMPT,
-    # general은 기본적으로 clinical을 따르거나 별도의 가벼운 챗봇 프롬프트를 연결할 수 있음
     "general": CLINICAL_PROMPT 
 }
 
@@ -194,19 +190,18 @@ Your goal is to synthesize these conflicting or complementary views into a **Fin
 [OUTPUT FORMAT]
 Provide a final summary in the following format:
 
-## 🎓 Tumor Board Final Conclusion
+<Tumor Board Final Conclusion>
 
-### 1. Synthesis of Opinions (의견 종합)
+1. Synthesis of Opinions (의견 종합)
 (Briefly summarize: "While biologically promising according to the immunologist, the clinical data is mixed, and safety concerns regarding myocarditis are significant...")
 
-### 2. Final Recommendation (최종 권고안)
+2. Final Recommendation (최종 권고안)
 (Clear actionable advice: "Recommended as 2nd line therapy," "Not recommended due to toxicity," or "Proceed with caution.")
 
-### 3. Critical Considerations (주요 고려사항)
+3. Critical Considerations (주요 고려사항)
 (Bullet points of what the treating physician must watch out for.)
 """
 
-# 딕셔너리에 moderator 추가
 AGENT_PROMPTS = {
     "mechanism": MECHANISM_PROMPT,
     "clinical": CLINICAL_PROMPT,

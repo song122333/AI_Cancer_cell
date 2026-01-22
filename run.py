@@ -1,7 +1,19 @@
 """
 Medical AI Advisor 실행 스크립트
-- Interactive Mode (사용자와 실시간 대화)
-- Pipeline: Router -> Retriever -> Solver
+<파이프라인>
+입력: run.py에서 질문을 입력받음
+
+검색: retriever.py가 FAISS DB에서 검색
+
+토론: solver.py에서 프롬프트에 따라 세번 llm 호출
+-Mechanism(기전): 약리 작용 분석
+-Clinical(임상): 가이드 라인 적용
+-Safety(안전): 위험 요소 경고
+
+종합: prompts.py와 solver.py에서 3명의 의견을 하나로 조율
+
+출력: run.py에서 프롬프트의 output가이드라인을 따라서 최종결과 출력
+
 """
 
 import os
@@ -9,71 +21,66 @@ import sys
 import time
 from dotenv import load_dotenv
 
-# 필요한 모듈 임포트 (우리가 수정한 파일들)
 from src.retrieval.embeddings import SolarEmbedder
 from src.retrieval.vector_store import FaissIndex
 from src.retrieval.retriever import get_relevant_context
 from src.llm.solver import run_multidisciplinary_debate
-# 경고 메시지 제어
+
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 load_dotenv()
 
 # ---------------------------------------------------
-# 1. 데이터 경로 설정
+# 1. 데이터 경로 설정 (단일 경로 통합)
 # ---------------------------------------------------
-# 실제 구축한 FAISS 인덱스 경로로 수정해주세요.
-# 만약 파일이 없다면 None으로 처리되어 Wikipedia 검색만 수행합니다.
-
-CLINICAL_INDEX_PATH = "data/Cancer_cell_merged.faiss"   # 가이드라인/임상 데이터
-CLINICAL_META_PATH = "data/Cancer_cell_merged.jsonl"
-
-LITERATURE_INDEX_PATH = "data/Cancer_cell_merged.faiss" # 논문 데이터
-LITERATURE_META_PATH = "data/Cancer_cell_merged.jsonl"
+INDEX_PATH = "data/Cancer_cell_merged.faiss"
+META_PATH = "data/Cancer_cell_merged.jsonl"
 
 # ---------------------------------------------------
 # 2. 리소스 로딩 함수
 # ---------------------------------------------------
-
 def load_resources():
     print("\n[System] Initializing Medical AI Advisor...")
     
-    # 1. 임베더 로딩 (시간이 조금 걸림)
+    # 1. 임베더 로딩
     print("[System] Loading Embedder (Solar)...")
-    embedder = SolarEmbedder()
+    try:
+        embedder = SolarEmbedder()
+    except Exception as e:
+        print(f"[Critical Error] Embedder 로딩 실패: {e}")
+        sys.exit(1)
 
     # 2. Vector DB 로딩
-    clinical_index = None
-    if os.path.exists(CLINICAL_INDEX_PATH):
-        print(f"[System] Loading Clinical Index from {CLINICAL_INDEX_PATH}...")
-        clinical_index = FaissIndex(CLINICAL_INDEX_PATH, CLINICAL_META_PATH)
+    vector_db = None
+    
+    if os.path.exists(INDEX_PATH) and os.path.exists(META_PATH):
+        print(f"[System] Loading Vector DB form {INDEX_PATH}...")
+        try:
+            vector_db = FaissIndex(INDEX_PATH, META_PATH)
+        except Exception as e:
+            print(f"[Error] DB 로딩 중 오류 발생: {e}")
+            vector_db = None
     else:
-        print("[Warning] Clinical Index not found. Skipping...")
-
-    literature_index = None
-    if os.path.exists(LITERATURE_INDEX_PATH):
-        print(f"[System] Loading Literature Index from {LITERATURE_INDEX_PATH}...")
-        literature_index = FaissIndex(LITERATURE_INDEX_PATH, LITERATURE_META_PATH)
-    else:
-        print("[Warning] Literature Index not found. Skipping...")
+        print(f"[Warning] DB 파일을 찾을 수 없습니다 ({INDEX_PATH}). 검색 기능 없이 실행됩니다.")
 
     print("[System] Initialization Complete.\n")
-    return embedder, clinical_index, literature_index
+    
+    return embedder, vector_db
 
 # ---------------------------------------------------
 # 3. 메인 실행 루프
 # ---------------------------------------------------
 
 def main():
-    embedder, clinical_index, literature_index = load_resources()
+    embedder, vector_db= load_resources()
 
     print("="*70)
-    print("   🏥 Multi-Agent Cancer Tumor Board AI (Debate Mode)")
+    print("    Multi-Agent Cancer Tumor Board AI (Debate Mode)")
     print("   (Mechanism vs Clinical vs Safety -> Final Verdict)")
     print("="*70)
 
     while True:
         try:
-            user_query = input("\n🧑‍⚕️ User Query: ").strip()
+            user_query = input("\nUser Query: ").strip()
             
             if not user_query:
                 continue
@@ -87,35 +94,34 @@ def main():
             context = get_relevant_context(
                 query=user_query,
                 embedder=embedder,
-                clinical_index=clinical_index,
-                literature_index=literature_index,
+                vector_db=vector_db,
                 use_wiki=True
             )
 
             # 2. 토론 실행 (Solver)
-            # 여기서는 Router 없이 바로 Debate 함수를 호출합니다.
+            print("   ↳ [Solver] Running multidisciplinary debate...")
             debate_result = run_multidisciplinary_debate(user_query, context)
 
             elapsed = time.time() - start_time
 
-            # 3. 결과 출력 (탭 형식처럼 구분해서 보여줌)
+            # 3. 결과 출력
             print("\n" + "="*70)
-            print(f"📋 **Tumor Board Report** (Generated in {elapsed:.2f}s)")
+            print(f"<Tumor Board Report>")
             print("="*70)
 
-            # (A) 각 전문가 의견 요약 출력 (선택 사항 - 너무 길면 생략 가능)
-            print("\n--- 🧬 [1. Mechanism Opinion] ---")
+            #각 전문가 의견 요약 출력
+            print("\n[1. Mechanism Opinion]")
             print(debate_result["mechanism"][:500] + "...\n(See full logs for details)")
 
-            print("\n--- 💊 [2. Clinical Opinion] ---")
+            print("\n[2. Clinical Opinion]")
             print(debate_result["clinical"][:500] + "...\n(See full logs for details)")
 
-            print("\n--- ⚠️ [3. Safety Opinion] ---")
+            print("\n[3. Safety Opinion]")
             print(debate_result["safety"][:500] + "...\n(See full logs for details)")
 
-            # (B) 최종 결론 출력
+            # 최종 결론 출력
             print("\n" + "*"*70)
-            print("🎓 **CHIEF ONCOLOGIST FINAL VERDICT**")
+            print("[CHIEF ONCOLOGIST FINAL VERDICT]")
             print("*"*70)
             print(debate_result["final_verdict"])
             print("*"*70)
