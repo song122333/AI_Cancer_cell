@@ -13,7 +13,7 @@ from typing import List, Dict, Optional
 import re
 import wikipediaapi
 
-from .embeddings import Embedder
+from .embeddings import SolarEmbedder
 from .vector_store import FaissIndex
 
 # ---------------------------------------------------------
@@ -30,7 +30,7 @@ wiki = wikipediaapi.Wikipedia(
 
 def search_faiss_index(
     query: str,
-    embedder: Embedder,
+    embedder: SolarEmbedder,
     index: FaissIndex,
     top_k: int = 5,
     source_tag: str = "InternalDB"
@@ -147,7 +147,7 @@ def search_wikipedia_chunks(query: str, max_pages: int = 3) -> List[Dict]:
 def rerank_results(
     query: str,
     candidates: List[Dict],
-    embedder: Embedder,
+    embedder: SolarEmbedder,
     top_k: int = 8
 ) -> List[Dict]:
     """
@@ -181,7 +181,7 @@ def rerank_results(
 
 def get_relevant_context(
     query: str,
-    embedder: Embedder,
+    embedder: SolarEmbedder,
     clinical_index: Optional[FaissIndex] = None,   # 임상 가이드라인
     literature_index: Optional[FaissIndex] = None, # 논문
     use_wiki: bool = True

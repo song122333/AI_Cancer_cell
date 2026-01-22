@@ -10,7 +10,7 @@ import time
 from dotenv import load_dotenv
 
 # 필요한 모듈 임포트 (우리가 수정한 파일들)
-from src.retrieval.embeddings import Embedder
+from src.retrieval.embeddings import SolarEmbedder
 from src.retrieval.vector_store import FaissIndex
 from src.retrieval.retriever import get_relevant_context
 from src.llm.solver import run_multidisciplinary_debate
@@ -38,8 +38,8 @@ def load_resources():
     print("\n[System] Initializing Medical AI Advisor...")
     
     # 1. 임베더 로딩 (시간이 조금 걸림)
-    print("[System] Loading Embedder (BGE-M3)...")
-    embedder = Embedder()
+    print("[System] Loading Embedder (Solar)...")
+    embedder = SolarEmbedder()
 
     # 2. Vector DB 로딩
     clinical_index = None
